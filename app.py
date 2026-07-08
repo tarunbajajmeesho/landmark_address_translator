@@ -44,13 +44,60 @@ st.markdown(
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');
 
+    /* ---- Theme tokens (light defaults, overridden for dark below) ---- */
+    :root {{
+        --pp-bg-1: #FBF0F8;
+        --pp-bg-2: #F7F0FE;
+        --pp-bg-3: #FBFAFF;
+        --pp-card-bg: #FFFFFF;
+        --pp-card-border: #F5DFF1;
+        --pp-card-shadow: rgba(159, 32, 137, 0.10);
+        --pp-text: #2B1330;
+        --pp-text-soft: #6B5A72;
+        --pp-heading: {MEESHO_PURPLE_DARK};
+        --pp-input-bg: #FFFFFF;
+        --pp-input-border: #F3D6EC;
+        --pp-metric-bg: #FFFDF7;
+        --pp-metric-border: #FFE9B8;
+        --pp-sidebar-1: #FFF9FC;
+        --pp-sidebar-2: #F6EEFC;
+        --pp-sidebar-border: #F5E3F0;
+        --pp-hr: #F0D9EB;
+    }}
+
+    @media (prefers-color-scheme: dark) {{
+        :root {{
+            --pp-bg-1: #1E1225;
+            --pp-bg-2: #241A2E;
+            --pp-bg-3: #170F1D;
+            --pp-card-bg: #2A1D33;
+            --pp-card-border: #452A4E;
+            --pp-card-shadow: rgba(0, 0, 0, 0.35);
+            --pp-text: #F3E9F5;
+            --pp-text-soft: #C9B8CE;
+            --pp-heading: #F3B6E0;
+            --pp-input-bg: #241A2E;
+            --pp-input-border: #4A3654;
+            --pp-metric-bg: #2E2320;
+            --pp-metric-border: #5A4326;
+            --pp-sidebar-1: #1E1225;
+            --pp-sidebar-2: #241A2E;
+            --pp-sidebar-border: #3A2A42;
+            --pp-hr: #3A2A42;
+        }}
+    }}
+
     html, body, [class*="css"] {{
         font-family: 'Poppins', sans-serif;
     }}
 
     /* Whole-app tinted background wash, like the app's home feed */
     .stApp {{
-        background: linear-gradient(180deg, #FBF0F8 0%, #F7F0FE 45%, #FBFAFF 100%);
+        background: linear-gradient(180deg, var(--pp-bg-1) 0%, var(--pp-bg-2) 45%, var(--pp-bg-3) 100%);
+    }}
+
+    .stApp, .stApp p, .stApp label, .stApp span, .stMarkdown {{
+        color: var(--pp-text);
     }}
 
     /* Kill Streamlit's default top padding so our navbar can bleed to the edge.
@@ -69,12 +116,12 @@ st.markdown(
     /* Full-bleed top navbar, edge-to-edge like the Meesho app header */
     .pp-navbar {{
         background: linear-gradient(90deg, {MEESHO_PINK} 0%, {MEESHO_PURPLE} 100%);
-        margin: 0 -6rem 1.6rem -6rem;
-        padding: 20px 6rem 26px 6rem;
-        box-shadow: 0 6px 20px rgba(159, 32, 137, 0.25);
+        margin: 0 -6rem 1.8rem -6rem;
+        padding: 22px 6rem 28px 6rem;
+        box-shadow: 0 8px 24px rgba(159, 32, 137, 0.30);
         display: flex;
         align-items: center;
-        gap: 16px;
+        gap: 18px;
         flex-wrap: wrap;
     }}
     .pp-navbar img.pp-logo {{
@@ -82,11 +129,11 @@ st.markdown(
         background: white;
         padding: 6px 10px;
         border-radius: 10px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.18);
     }}
     .pp-navbar-text h1 {{
         color: white !important;
-        font-size: 2rem;
+        font-size: 2.05rem;
         margin: 0;
         font-weight: 800;
         letter-spacing: -0.5px;
@@ -94,16 +141,18 @@ st.markdown(
     .pp-navbar-text p {{
         color: {MEESHO_YELLOW};
         font-size: 1.02rem;
-        margin: 4px 0 0 0;
+        margin: 5px 0 0 0;
         font-weight: 600;
+        letter-spacing: 0.2px;
     }}
     .pp-navbar-text span.sub {{
-        color: rgba(255,255,255,0.9);
+        color: rgba(255,255,255,0.92);
         font-size: 0.92rem;
         display: block;
         margin-top: 10px;
         font-weight: 400;
         max-width: 640px;
+        line-height: 1.5;
     }}
 
     /* --- Responsive breakpoints --- */
@@ -124,13 +173,14 @@ st.markdown(
     }}
 
     /* Card-style containers (st.container(border=True)) — the white "product card"
-       look that floats on top of the tinted background */
+       look that floats on top of the tinted background, dark-mode aware */
     div[data-testid="stVerticalBlockBorderWrapper"] {{
-        background: #FFFFFF;
-        border: 1px solid #F5DFF1 !important;
+        background: var(--pp-card-bg);
+        border: 1px solid var(--pp-card-border) !important;
         border-radius: 18px !important;
-        padding: 6px 6px !important;
-        box-shadow: 0 4px 18px rgba(159, 32, 137, 0.10);
+        padding: 8px 8px !important;
+        box-shadow: 0 4px 20px var(--pp-card-shadow);
+        transition: box-shadow 0.2s ease;
     }}
 
     /* Buttons — pill-shaped like Meesho CTAs */
@@ -140,14 +190,19 @@ st.markdown(
         font-weight: 700 !important;
         padding: 0.55rem 1.2rem !important;
         width: 100%;
+        transition: transform 0.12s ease, box-shadow 0.12s ease;
+    }}
+    .stButton > button:hover, .stLinkButton > a:hover {{
+        transform: translateY(-1px);
+        box-shadow: 0 4px 14px rgba(159, 32, 137, 0.28);
     }}
     .stButton > button[kind="primary"] {{
         background: linear-gradient(90deg, {MEESHO_PINK} 0%, {MEESHO_PURPLE} 100%) !important;
         color: white !important;
     }}
     .stButton > button[kind="secondary"] {{
-        background: #FFF6E0 !important;
-        color: {MEESHO_PURPLE_DARK} !important;
+        background: var(--pp-metric-bg) !important;
+        color: var(--pp-heading) !important;
         border: 1.5px solid {MEESHO_YELLOW} !important;
     }}
     .stLinkButton > a {{
@@ -157,22 +212,30 @@ st.markdown(
 
     /* Headers */
     h2, h3 {{
-        color: {MEESHO_PURPLE_DARK} !important;
+        color: var(--pp-heading) !important;
         font-weight: 700 !important;
+    }}
+    .stCaption, [data-testid="stCaptionContainer"] {{
+        color: var(--pp-text-soft) !important;
     }}
 
     /* Metric cards */
     div[data-testid="stMetric"] {{
-        background: #FFFDF7;
-        border: 1.5px solid #FFE9B8;
+        background: var(--pp-metric-bg);
+        border: 1.5px solid var(--pp-metric-border);
         border-radius: 14px;
         padding: 10px 14px;
+    }}
+    div[data-testid="stMetricValue"] {{
+        color: var(--pp-heading) !important;
     }}
 
     /* Text inputs / textarea */
     .stTextInput input, .stTextArea textarea, div[data-baseweb="select"] > div {{
         border-radius: 12px !important;
-        border-color: #F3D6EC !important;
+        border-color: var(--pp-input-border) !important;
+        background: var(--pp-input-bg) !important;
+        color: var(--pp-text) !important;
     }}
 
     /* Alerts (info/success/warning) — rounded, tinted to match brand */
@@ -182,16 +245,16 @@ st.markdown(
 
     /* Sidebar */
     section[data-testid="stSidebar"] {{
-        background: linear-gradient(180deg, #FFF9FC 0%, #F6EEFC 100%);
-        border-right: 1px solid #F5E3F0;
+        background: linear-gradient(180deg, var(--pp-sidebar-1) 0%, var(--pp-sidebar-2) 100%);
+        border-right: 1px solid var(--pp-sidebar-border);
     }}
     section[data-testid="stSidebar"] h2 {{
-        color: {MEESHO_PURPLE_DARK} !important;
+        color: var(--pp-heading) !important;
     }}
 
     /* Divider color */
     hr {{
-        border-color: #F0D9EB !important;
+        border-color: var(--pp-hr) !important;
     }}
 
     /* Progress bar */
@@ -219,17 +282,11 @@ OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
 NOMINATIM_REVERSE_URL = "https://nominatim.openstreetmap.org/reverse"
 
-# Models on OpenRouter that are cheap/fast and good enough for this task.
-# NOTE: Claude 3.5 Haiku and GPT-4o mini are PAID models — they will return
-# a 404 "No endpoints found" error if your OpenRouter account has $0 balance.
-# The Llama option below uses the ":free" suffix, which is required to hit
-# OpenRouter's free tier — without it, OpenRouter silently routes to the
-# paid endpoint for the same model and you'll hit the same 404.
-MODEL_OPTIONS = {
-    "Llama 3.3 70B (free, recommended to start)": "meta-llama/llama-3.3-70b-instruct:free",
-    "Claude 3.5 Haiku (paid — needs OpenRouter credits)": "anthropic/claude-3.5-haiku",
-    "GPT-4o mini (paid — needs OpenRouter credits)": "openai/gpt-4o-mini",
-}
+# Fixed model — GPT-4o mini via OpenRouter. This is a PAID model: it will
+# return a 404 "No endpoints found" error if your OpenRouter account has
+# $0 balance. Add credits at https://openrouter.ai/settings/credits.
+SELECTED_MODEL = "openai/gpt-4o-mini"
+SELECTED_MODEL_LABEL = "GPT-4o mini"
 
 LANGUAGES = [
     "English",
@@ -500,8 +557,8 @@ with st.sidebar:
             "Not stored anywhere except this browser session.",
         )
 
-    model_label = st.selectbox("Model", list(MODEL_OPTIONS.keys()), index=0)
-    selected_model = MODEL_OPTIONS[model_label]
+    st.caption(f"🧠 Model: **{SELECTED_MODEL_LABEL}** (fixed, via OpenRouter)")
+    selected_model = SELECTED_MODEL
 
     st.divider()
     st.caption(
@@ -599,12 +656,9 @@ if submit:
             status = e.response.status_code if e.response is not None else None
             if status == 404:
                 st.error(
-                    "OpenRouter couldn't find an available endpoint for this model "
-                    "(404). This almost always means either: (1) your OpenRouter "
-                    "account has $0 balance and you picked a paid model — switch to "
-                    "the free Llama 3.3 70B option in the sidebar, or add credits at "
-                    "openrouter.ai/settings/credits, or (2) the model slug is stale — "
-                    "check openrouter.ai/models for the current one."
+                    "OpenRouter couldn't find an available endpoint for GPT-4o mini "
+                    "(404). This almost always means your OpenRouter account has "
+                    "$0 balance — add credits at openrouter.ai/settings/credits."
                 )
             elif status == 401:
                 st.error("OpenRouter rejected the API key (401) — double-check it's correct and active.")
@@ -615,8 +669,7 @@ if submit:
             st.stop()
         except (KeyError, json.JSONDecodeError):
             st.error(
-                "Couldn't parse a clean response from the model. "
-                "Try again, or switch to a different model in the sidebar."
+                "Couldn't parse a clean response from the model. Please try again."
             )
             st.stop()
         except Exception as e:
