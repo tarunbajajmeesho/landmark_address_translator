@@ -1,11 +1,11 @@
 """
-Landmark Address Translator
+PataPakka — Sahi Pata, Sahi Delivery
 ----------------------------
 Turns messy, landmark-based Indian addresses ("near the blue water tank,
 behind Ramesh tea stall, opposite govt school") into a clean,
 delivery-agent-friendly format, flags how likely the address is to
 cause a failed/delayed delivery, and (when possible) shows an
-approximate pin on a map.
+approximate pin on a colourful, familiar-looking Google Map.
 
 Built for the Meesho Buildathon.
 """
@@ -16,15 +16,110 @@ import urllib.parse
 
 import requests
 import streamlit as st
+import streamlit.components.v1 as components
 
 # --------------------------------------------------------------------------
 # CONFIG
 # --------------------------------------------------------------------------
 
 st.set_page_config(
-    page_title="Landmark Address Translator",
+    page_title="PataPakka | Sahi Pata, Sahi Delivery",
     page_icon="📍",
     layout="centered",
+)
+
+# --------------------------------------------------------------------------
+# THEME — Meesho-inspired Jamuni purple + Aam mango yellow
+# --------------------------------------------------------------------------
+
+MEESHO_PURPLE = "#7D58BA"
+MEESHO_PURPLE_DARK = "#5C3D96"
+MEESHO_YELLOW = "#FFC94A"
+MEESHO_PINK = "#F43397"
+
+st.markdown(
+    f"""
+    <style>
+    .stApp {{
+        background: linear-gradient(180deg, #FAF7FF 0%, #FFFFFF 100%);
+    }}
+
+    /* Hero banner */
+    .pp-hero {{
+        background: linear-gradient(120deg, {MEESHO_PURPLE} 0%, {MEESHO_PINK} 100%);
+        padding: 28px 28px 24px 28px;
+        border-radius: 18px;
+        margin-bottom: 22px;
+        box-shadow: 0 8px 24px rgba(125, 88, 186, 0.25);
+    }}
+    .pp-hero h1 {{
+        color: white !important;
+        font-size: 2.1rem;
+        margin: 0;
+        font-weight: 800;
+        letter-spacing: -0.5px;
+    }}
+    .pp-hero p {{
+        color: {MEESHO_YELLOW};
+        font-size: 1.05rem;
+        margin: 6px 0 0 0;
+        font-weight: 600;
+    }}
+    .pp-hero span.sub {{
+        color: rgba(255,255,255,0.85);
+        font-size: 0.92rem;
+        display: block;
+        margin-top: 8px;
+        font-weight: 400;
+    }}
+
+    /* Buttons */
+    .stButton > button, .stLinkButton > a {{
+        border-radius: 10px !important;
+        border: none !important;
+        font-weight: 700 !important;
+    }}
+    .stButton > button[kind="primary"] {{
+        background: linear-gradient(90deg, {MEESHO_PURPLE} 0%, {MEESHO_PINK} 100%) !important;
+        color: white !important;
+    }}
+    .stButton > button[kind="secondary"] {{
+        background: #FFF6E0 !important;
+        color: {MEESHO_PURPLE_DARK} !important;
+        border: 1.5px solid {MEESHO_YELLOW} !important;
+    }}
+    .stLinkButton > a {{
+        background: linear-gradient(90deg, {MEESHO_YELLOW} 0%, #FFB300 100%) !important;
+        color: #4A2E00 !important;
+    }}
+
+    /* Headers */
+    h2, h3 {{
+        color: {MEESHO_PURPLE_DARK} !important;
+    }}
+
+    /* Metric cards */
+    div[data-testid="stMetric"] {{
+        background: #FFFFFF;
+        border: 1.5px solid #EEE3FB;
+        border-radius: 14px;
+        padding: 10px 14px;
+        box-shadow: 0 2px 8px rgba(125, 88, 186, 0.08);
+    }}
+
+    /* Sidebar */
+    section[data-testid="stSidebar"] {{
+        background: linear-gradient(180deg, #FFFFFF 0%, #F6F0FF 100%);
+        border-right: 1px solid #EEE3FB;
+    }}
+
+    /* Divider color */
+    hr {{
+        border-color: #EEE3FB !important;
+    }}
+    </style>
+    """,
+    unsafe_allow_html=True,
 )
 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
@@ -143,7 +238,7 @@ def call_openrouter(raw_address: str, city_hint: str, model: str, api_key: str) 
         "Content-Type": "application/json",
         # Recommended by OpenRouter for attribution / rate-limit friendliness.
         "HTTP-Referer": "https://streamlit.io",
-        "X-Title": "Landmark Address Translator",
+        "X-Title": "PataPakka",
     }
 
     payload = {
@@ -269,6 +364,25 @@ def google_maps_search_url(landmark_candidates: list, area: str, city: str, stat
     return "https://www.google.com/maps/search/?api=1&query=" + urllib.parse.quote(query)
 
 
+def google_maps_embed_by_coords(lat: float, lon: float, zoom: int = 15) -> str:
+    """Build a no-API-key Google Maps EMBED url for a lat/lon pin — this is
+    the actual colourful Google Maps look (roads, POIs, satellite toggle)
+    rather than the flat st.map() view."""
+    return f"https://maps.google.com/maps?q={lat},{lon}&z={zoom}&output=embed"
+
+
+def google_maps_embed_by_query(query: str, zoom: int = 13) -> str:
+    """Build a no-API-key Google Maps EMBED url from a free-text search query.
+    Used as a fallback when OSM couldn't find a confident pin, so the user
+    still gets a colourful, familiar map instead of nothing."""
+    return f"https://maps.google.com/maps?q={urllib.parse.quote(query)}&z={zoom}&output=embed"
+
+
+def render_google_map(embed_url: str, height: int = 380):
+    """Render an embedded Google Map iframe inline in the app."""
+    components.iframe(embed_url, height=height, scrolling=False)
+
+
 def risk_badge(risk_level: str) -> str:
     colors = {"low": "🟢 Low risk", "medium": "🟠 Medium risk", "high": "🔴 High risk"}
     return colors.get(risk_level.lower(), risk_level)
@@ -298,22 +412,28 @@ with st.sidebar:
 
     st.divider()
     st.caption(
-        "Built for the Meesho Buildathon 🚀\n\n"
-        "Helps convert informal, landmark-based addresses "
-        "(common in tier 2/3/4 towns) into a clear, structured "
-        "format delivery agents can actually use — reducing "
-        "failed deliveries and RTOs."
+        "**PataPakka** 🚀 · Built for the Meesho Buildathon\n\n"
+        "Pata (address) + Pakka (confirmed) — turns informal, "
+        "landmark-based addresses (common in tier 2/3/4 towns) into a "
+        "clear, structured format delivery agents can actually use — "
+        "reducing failed deliveries and RTOs."
     )
 
 # --------------------------------------------------------------------------
 # MAIN UI
 # --------------------------------------------------------------------------
 
-st.title("📍 Landmark Address Translator")
-st.write(
-    "Describe an address the way you'd tell it to a neighbour — "
-    "we'll turn it into something a delivery agent can actually follow, "
-    "and flag if it's likely to cause a delivery problem."
+st.markdown(
+    """
+    <div class="pp-hero">
+        <h1>📍 PataPakka</h1>
+        <p>Sahi Pata, Sahi Delivery</p>
+        <span class="sub">Describe an address the way you'd tell it to a neighbour —
+        we'll turn it into something a delivery agent can actually follow,
+        and flag if it's likely to cause a delivery problem.</span>
+    </div>
+    """,
+    unsafe_allow_html=True,
 )
 
 example_col1, example_col2 = st.columns(2)
@@ -405,7 +525,7 @@ if submit:
             st.stop()
 
     # ---------------- Results ----------------
-    st.subheader("📦 Delivery-ready address")
+    st.subheader("📦 Pakka address, ready to dispatch")
     st.info(result.get("formatted_address", "—"))
 
     score = result.get("clarity_score", 0)
@@ -453,7 +573,9 @@ if submit:
     if match:
         st.success(confidence_labels.get(match["confidence"], ""))
         st.caption(f"Matched on: *{match['matched_query']}*")
-        st.map({"lat": [match["lat"]], "lon": [match["lon"]]}, zoom=15 if match["confidence"] == "landmark" else 12)
+
+        zoom_level = 16 if match["confidence"] == "landmark" else 13
+        render_google_map(google_maps_embed_by_coords(match["lat"], match["lon"], zoom=zoom_level))
 
         with st.spinner("Double-checking what's actually at this pin..."):
             nearby = nominatim_reverse(match["lat"], match["lon"])
@@ -464,11 +586,16 @@ if submit:
         st.warning(
             "Could not find any confident pin on OpenStreetMap for this address. "
             "Small/unnamed landmarks in tier 2/3/4 areas often aren't mapped — "
-            "use the Google Maps link below to search manually, or verify by phone."
+            "here's a Google Maps search on the best-guess description instead."
         )
+        fallback_query = build_location_string(
+            [landmark_candidates[0] if landmark_candidates else "", area, city, state, pincode]
+        ) or city_hint
+        if fallback_query:
+            render_google_map(google_maps_embed_by_query(fallback_query))
 
     maps_url = google_maps_search_url(landmark_candidates, area, city, state, pincode, city_hint)
-    st.link_button("🔎 Open best-guess search in Google Maps", maps_url, use_container_width=True)
+    st.link_button("🛵 Open in Google Maps for final check", maps_url, use_container_width=True)
     st.caption(
         "Google's map coverage of small-town India is usually more complete than OpenStreetMap's — "
         "use this link to visually confirm the location before dispatch, especially for medium/low confidence matches."
@@ -479,6 +606,6 @@ if submit:
 
 st.divider()
 st.caption(
-    "⚠️ This tool gives a best-effort interpretation — always let the customer "
+    "⚠️ **PataPakka** gives a best-effort interpretation — always let the customer "
     "confirm the final address before dispatch, especially for high-risk scores."
 )
