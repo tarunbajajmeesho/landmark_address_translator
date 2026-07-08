@@ -32,11 +32,12 @@ st.set_page_config(
 # THEME — Meesho-inspired Jamuni purple + Aam mango yellow
 # --------------------------------------------------------------------------
 
-MEESHO_PURPLE = "#7D58BA"
-MEESHO_PURPLE_DARK = "#5C3D96"
-MEESHO_YELLOW = "#FFC94A"
-MEESHO_PINK = "#E91E8C"
-MEESHO_PINK_DARK = "#C4106E"
+MEESHO_PURPLE = "#7D58BA"        # Jamuni
+MEESHO_PURPLE_DARK = "#580A46"   # Loulou (deep plum, from official palette)
+MEESHO_YELLOW = "#FFC94A"        # Aam (mango)
+MEESHO_PINK = "#9F2089"          # Violet Eggplant — Meesho's primary logo color
+MEESHO_PINK_LIGHT = "#D49DC4"    # Viola
+MEESHO_LOGO_URL = "https://upload.wikimedia.org/wikipedia/commons/thumb/3/33/Meesho_logo.png/960px-Meesho_logo.png"
 
 st.markdown(
     f"""
@@ -49,39 +50,54 @@ st.markdown(
 
     /* Whole-app tinted background wash, like the app's home feed */
     .stApp {{
-        background: linear-gradient(180deg, #FDF1F8 0%, #F7F0FE 45%, #FBFAFF 100%);
+        background: linear-gradient(180deg, #FBF0F8 0%, #F7F0FE 45%, #FBFAFF 100%);
     }}
 
-    /* Kill Streamlit's default top padding so our navbar can bleed to the edge */
+    /* Kill Streamlit's default top padding so our navbar can bleed to the edge.
+       Fluid max-width: fills small/mobile screens, caps on desktop so lines
+       don't stretch too wide to read comfortably. */
     .block-container {{
         padding-top: 0rem !important;
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
         max-width: 760px;
+    }}
+    @media (min-width: 1200px) {{
+        .block-container {{ max-width: 820px; }}
     }}
 
     /* Full-bleed top navbar, edge-to-edge like the Meesho app header */
     .pp-navbar {{
         background: linear-gradient(90deg, {MEESHO_PINK} 0%, {MEESHO_PURPLE} 100%);
         margin: 0 -6rem 1.6rem -6rem;
-        padding: 22px 6rem 26px 6rem;
-        box-shadow: 0 6px 20px rgba(233, 30, 140, 0.25);
+        padding: 20px 6rem 26px 6rem;
+        box-shadow: 0 6px 20px rgba(159, 32, 137, 0.25);
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        flex-wrap: wrap;
     }}
-    @media (max-width: 900px) {{
-        .pp-navbar {{ margin: 0 -1.2rem 1.4rem -1.2rem; padding: 20px 1.2rem 24px 1.2rem; }}
+    .pp-navbar img.pp-logo {{
+        height: 34px;
+        background: white;
+        padding: 6px 10px;
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
     }}
-    .pp-navbar h1 {{
+    .pp-navbar-text h1 {{
         color: white !important;
         font-size: 2rem;
         margin: 0;
         font-weight: 800;
         letter-spacing: -0.5px;
     }}
-    .pp-navbar p {{
+    .pp-navbar-text p {{
         color: {MEESHO_YELLOW};
         font-size: 1.02rem;
         margin: 4px 0 0 0;
         font-weight: 600;
     }}
-    .pp-navbar span.sub {{
+    .pp-navbar-text span.sub {{
         color: rgba(255,255,255,0.9);
         font-size: 0.92rem;
         display: block;
@@ -90,14 +106,31 @@ st.markdown(
         max-width: 640px;
     }}
 
+    /* --- Responsive breakpoints --- */
+    @media (max-width: 900px) {{
+        .pp-navbar {{
+            margin: 0 -1rem 1.2rem -1rem;
+            padding: 16px 1rem 20px 1rem;
+        }}
+        .pp-navbar-text h1 {{ font-size: 1.5rem; }}
+        .pp-navbar-text p {{ font-size: 0.9rem; }}
+        .pp-navbar-text span.sub {{ font-size: 0.82rem; }}
+        .pp-navbar img.pp-logo {{ height: 26px; padding: 4px 8px; }}
+        .block-container {{ padding-left: 0.6rem !important; padding-right: 0.6rem !important; }}
+    }}
+    @media (max-width: 480px) {{
+        .pp-navbar {{ flex-direction: column; align-items: flex-start; }}
+        .pp-navbar-text h1 {{ font-size: 1.3rem; }}
+    }}
+
     /* Card-style containers (st.container(border=True)) — the white "product card"
        look that floats on top of the tinted background */
     div[data-testid="stVerticalBlockBorderWrapper"] {{
         background: #FFFFFF;
-        border: 1px solid #F5E3F0 !important;
+        border: 1px solid #F5DFF1 !important;
         border-radius: 18px !important;
         padding: 6px 6px !important;
-        box-shadow: 0 4px 18px rgba(125, 88, 186, 0.10);
+        box-shadow: 0 4px 18px rgba(159, 32, 137, 0.10);
     }}
 
     /* Buttons — pill-shaped like Meesho CTAs */
@@ -106,6 +139,7 @@ st.markdown(
         border: none !important;
         font-weight: 700 !important;
         padding: 0.55rem 1.2rem !important;
+        width: 100%;
     }}
     .stButton > button[kind="primary"] {{
         background: linear-gradient(90deg, {MEESHO_PINK} 0%, {MEESHO_PURPLE} 100%) !important;
@@ -138,7 +172,7 @@ st.markdown(
     /* Text inputs / textarea */
     .stTextInput input, .stTextArea textarea, div[data-baseweb="select"] > div {{
         border-radius: 12px !important;
-        border-color: #F0D9EB !important;
+        border-color: #F3D6EC !important;
     }}
 
     /* Alerts (info/success/warning) — rounded, tinted to match brand */
@@ -163,6 +197,18 @@ st.markdown(
     /* Progress bar */
     div[data-testid="stProgress"] > div > div {{
         background-image: linear-gradient(90deg, {MEESHO_PINK}, {MEESHO_PURPLE}) !important;
+    }}
+
+    /* Stack side-by-side columns (example buttons, metrics) on small screens
+       so nothing gets squeezed into an unreadable sliver on mobile */
+    @media (max-width: 640px) {{
+        div[data-testid="stHorizontalBlock"] {{
+            flex-wrap: wrap !important;
+        }}
+        div[data-testid="stHorizontalBlock"] > div[data-testid="column"] {{
+            min-width: 100% !important;
+            flex: 1 1 100% !important;
+        }}
     }}
     </style>
     """,
@@ -471,13 +517,16 @@ with st.sidebar:
 # --------------------------------------------------------------------------
 
 st.markdown(
-    """
+    f"""
     <div class="pp-navbar">
-        <h1>📍 PataPakka</h1>
-        <p>Sahi Pata, Sahi Delivery</p>
-        <span class="sub">Describe an address the way you'd tell it to a neighbour —
-        we'll turn it into something a delivery agent can actually follow,
-        and flag if it's likely to cause a delivery problem.</span>
+        <img class="pp-logo" src="{MEESHO_LOGO_URL}" alt="Meesho logo" />
+        <div class="pp-navbar-text">
+            <h1>📍 PataPakka</h1>
+            <p>Sahi Pata, Sahi Delivery</p>
+            <span class="sub">Describe an address the way you'd tell it to a neighbour —
+            we'll turn it into something a delivery agent can actually follow,
+            and flag if it's likely to cause a delivery problem.</span>
+        </div>
     </div>
     """,
     unsafe_allow_html=True,
