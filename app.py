@@ -35,52 +35,80 @@ st.set_page_config(
 MEESHO_PURPLE = "#7D58BA"
 MEESHO_PURPLE_DARK = "#5C3D96"
 MEESHO_YELLOW = "#FFC94A"
-MEESHO_PINK = "#F43397"
+MEESHO_PINK = "#E91E8C"
+MEESHO_PINK_DARK = "#C4106E"
 
 st.markdown(
     f"""
     <style>
-    .stApp {{
-        background: linear-gradient(180deg, #FAF7FF 0%, #FFFFFF 100%);
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');
+
+    html, body, [class*="css"] {{
+        font-family: 'Poppins', sans-serif;
     }}
 
-    /* Hero banner */
-    .pp-hero {{
-        background: linear-gradient(120deg, {MEESHO_PURPLE} 0%, {MEESHO_PINK} 100%);
-        padding: 28px 28px 24px 28px;
-        border-radius: 18px;
-        margin-bottom: 22px;
-        box-shadow: 0 8px 24px rgba(125, 88, 186, 0.25);
+    /* Whole-app tinted background wash, like the app's home feed */
+    .stApp {{
+        background: linear-gradient(180deg, #FDF1F8 0%, #F7F0FE 45%, #FBFAFF 100%);
     }}
-    .pp-hero h1 {{
+
+    /* Kill Streamlit's default top padding so our navbar can bleed to the edge */
+    .block-container {{
+        padding-top: 0rem !important;
+        max-width: 760px;
+    }}
+
+    /* Full-bleed top navbar, edge-to-edge like the Meesho app header */
+    .pp-navbar {{
+        background: linear-gradient(90deg, {MEESHO_PINK} 0%, {MEESHO_PURPLE} 100%);
+        margin: 0 -6rem 1.6rem -6rem;
+        padding: 22px 6rem 26px 6rem;
+        box-shadow: 0 6px 20px rgba(233, 30, 140, 0.25);
+    }}
+    @media (max-width: 900px) {{
+        .pp-navbar {{ margin: 0 -1.2rem 1.4rem -1.2rem; padding: 20px 1.2rem 24px 1.2rem; }}
+    }}
+    .pp-navbar h1 {{
         color: white !important;
-        font-size: 2.1rem;
+        font-size: 2rem;
         margin: 0;
         font-weight: 800;
         letter-spacing: -0.5px;
     }}
-    .pp-hero p {{
+    .pp-navbar p {{
         color: {MEESHO_YELLOW};
-        font-size: 1.05rem;
-        margin: 6px 0 0 0;
+        font-size: 1.02rem;
+        margin: 4px 0 0 0;
         font-weight: 600;
     }}
-    .pp-hero span.sub {{
-        color: rgba(255,255,255,0.85);
+    .pp-navbar span.sub {{
+        color: rgba(255,255,255,0.9);
         font-size: 0.92rem;
         display: block;
-        margin-top: 8px;
+        margin-top: 10px;
         font-weight: 400;
+        max-width: 640px;
     }}
 
-    /* Buttons */
+    /* Card-style containers (st.container(border=True)) — the white "product card"
+       look that floats on top of the tinted background */
+    div[data-testid="stVerticalBlockBorderWrapper"] {{
+        background: #FFFFFF;
+        border: 1px solid #F5E3F0 !important;
+        border-radius: 18px !important;
+        padding: 6px 6px !important;
+        box-shadow: 0 4px 18px rgba(125, 88, 186, 0.10);
+    }}
+
+    /* Buttons — pill-shaped like Meesho CTAs */
     .stButton > button, .stLinkButton > a {{
-        border-radius: 10px !important;
+        border-radius: 999px !important;
         border: none !important;
         font-weight: 700 !important;
+        padding: 0.55rem 1.2rem !important;
     }}
     .stButton > button[kind="primary"] {{
-        background: linear-gradient(90deg, {MEESHO_PURPLE} 0%, {MEESHO_PINK} 100%) !important;
+        background: linear-gradient(90deg, {MEESHO_PINK} 0%, {MEESHO_PURPLE} 100%) !important;
         color: white !important;
     }}
     .stButton > button[kind="secondary"] {{
@@ -96,26 +124,45 @@ st.markdown(
     /* Headers */
     h2, h3 {{
         color: {MEESHO_PURPLE_DARK} !important;
+        font-weight: 700 !important;
     }}
 
     /* Metric cards */
     div[data-testid="stMetric"] {{
-        background: #FFFFFF;
-        border: 1.5px solid #EEE3FB;
+        background: #FFFDF7;
+        border: 1.5px solid #FFE9B8;
         border-radius: 14px;
         padding: 10px 14px;
-        box-shadow: 0 2px 8px rgba(125, 88, 186, 0.08);
+    }}
+
+    /* Text inputs / textarea */
+    .stTextInput input, .stTextArea textarea, div[data-baseweb="select"] > div {{
+        border-radius: 12px !important;
+        border-color: #F0D9EB !important;
+    }}
+
+    /* Alerts (info/success/warning) — rounded, tinted to match brand */
+    div[data-testid="stAlert"] {{
+        border-radius: 14px !important;
     }}
 
     /* Sidebar */
     section[data-testid="stSidebar"] {{
-        background: linear-gradient(180deg, #FFFFFF 0%, #F6F0FF 100%);
-        border-right: 1px solid #EEE3FB;
+        background: linear-gradient(180deg, #FFF9FC 0%, #F6EEFC 100%);
+        border-right: 1px solid #F5E3F0;
+    }}
+    section[data-testid="stSidebar"] h2 {{
+        color: {MEESHO_PURPLE_DARK} !important;
     }}
 
     /* Divider color */
     hr {{
-        border-color: #EEE3FB !important;
+        border-color: #F0D9EB !important;
+    }}
+
+    /* Progress bar */
+    div[data-testid="stProgress"] > div > div {{
+        background-image: linear-gradient(90deg, {MEESHO_PINK}, {MEESHO_PURPLE}) !important;
     }}
     </style>
     """,
@@ -425,7 +472,7 @@ with st.sidebar:
 
 st.markdown(
     """
-    <div class="pp-hero">
+    <div class="pp-navbar">
         <h1>📍 PataPakka</h1>
         <p>Sahi Pata, Sahi Delivery</p>
         <span class="sub">Describe an address the way you'd tell it to a neighbour —
@@ -436,42 +483,45 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-example_col1, example_col2 = st.columns(2)
-with example_col1:
-    if st.button("Try an example (Hindi-English mix)", use_container_width=True):
-        st.session_state["raw_address"] = (
-            "Ramesh tea stall ke peeche, blue paani ki tanki ke pass, "
-            "school wali gali me teesra ghar, neela gate hai"
-        )
-        st.session_state["city_hint"] = "Sitapur, Uttar Pradesh"
-with example_col2:
-    if st.button("Try an example (very vague)", use_container_width=True):
-        st.session_state["raw_address"] = "near the big tree, ask anyone for Suresh's house"
-        st.session_state["city_hint"] = "Bhagalpur, Bihar"
+input_card = st.container(border=True)
+with input_card:
 
-raw_address = st.text_area(
-    "Describe the address (any language, however you'd normally say it)",
-    key="raw_address",
-    height=120,
-    placeholder=(
-        "e.g. Ramesh chaha ki dukaan ke peeche, neeli paani ki tanki ke pass, "
-        "school wali gali mein teesra ghar"
-    ),
-)
+    example_col1, example_col2 = st.columns(2)
+    with example_col1:
+        if st.button("Try an example (Hindi-English mix)", use_container_width=True):
+            st.session_state["raw_address"] = (
+                "Ramesh tea stall ke peeche, blue paani ki tanki ke pass, "
+                "school wali gali me teesra ghar, neela gate hai"
+            )
+            st.session_state["city_hint"] = "Sitapur, Uttar Pradesh"
+    with example_col2:
+        if st.button("Try an example (very vague)", use_container_width=True):
+            st.session_state["raw_address"] = "near the big tree, ask anyone for Suresh's house"
+            st.session_state["city_hint"] = "Bhagalpur, Bihar"
 
-city_hint = st.text_input(
-    "City / town / pincode (optional, but helps a LOT)",
-    key="city_hint",
-    placeholder="e.g. Sitapur, Uttar Pradesh, 261001",
-)
+    raw_address = st.text_area(
+        "Describe the address (any language, however you'd normally say it)",
+        key="raw_address",
+        height=120,
+        placeholder=(
+            "e.g. Ramesh chaha ki dukaan ke peeche, neeli paani ki tanki ke pass, "
+            "school wali gali mein teesra ghar"
+        ),
+    )
 
-output_language = st.selectbox(
-    "Output language for the formatted address",
-    LANGUAGES,
-    index=0,
-)
+    city_hint = st.text_input(
+        "City / town / pincode (optional, but helps a LOT)",
+        key="city_hint",
+        placeholder="e.g. Sitapur, Uttar Pradesh, 261001",
+    )
 
-submit = st.button("✨ Translate address", type="primary", use_container_width=True)
+    output_language = st.selectbox(
+        "Output language for the formatted address",
+        LANGUAGES,
+        index=0,
+    )
+
+    submit = st.button("✨ Translate address", type="primary", use_container_width=True)
 
 st.divider()
 
@@ -525,33 +575,35 @@ if submit:
             st.stop()
 
     # ---------------- Results ----------------
-    st.subheader("📦 Pakka address, ready to dispatch")
-    st.info(result.get("formatted_address", "—"))
+    summary_card = st.container(border=True)
+    with summary_card:
+        st.subheader("📦 Pakka address, ready to dispatch")
+        st.info(result.get("formatted_address", "—"))
 
-    score = result.get("clarity_score", 0)
-    risk = result.get("risk_level", "unknown")
+        score = result.get("clarity_score", 0)
+        risk = result.get("risk_level", "unknown")
 
-    m1, m2 = st.columns(2)
-    with m1:
-        st.metric("Clarity score", f"{score}/100")
-        st.progress(min(max(score, 0), 100) / 100)
-    with m2:
-        st.metric("Delivery risk", risk_badge(risk))
+        m1, m2 = st.columns(2)
+        with m1:
+            st.metric("Clarity score", f"{score}/100")
+            st.progress(min(max(score, 0), 100) / 100)
+        with m2:
+            st.metric("Delivery risk", risk_badge(risk))
 
-    st.subheader("🧭 Directions summary")
-    st.write(result.get("directions_summary", "—"))
+        st.subheader("🧭 Directions summary")
+        st.write(result.get("directions_summary", "—"))
 
-    missing = result.get("missing_info", [])
-    if missing:
-        st.subheader("⚠️ What's missing")
-        for item in missing:
-            st.write(f"- {item}")
+        missing = result.get("missing_info", [])
+        if missing:
+            st.subheader("⚠️ What's missing")
+            for item in missing:
+                st.write(f"- {item}")
 
-    questions = result.get("suggested_questions", [])
-    if questions:
-        st.subheader("❓ Ask the customer")
-        for q in questions:
-            st.write(f"- {q}")
+        questions = result.get("suggested_questions", [])
+        if questions:
+            st.subheader("❓ Ask the customer")
+            for q in questions:
+                st.write(f"- {q}")
 
     landmark_candidates = result.get("landmark_candidates", [])
     area = result.get("area", "")
@@ -559,47 +611,50 @@ if submit:
     state = result.get("state", "")
     pincode = result.get("pincode", "")
 
-    st.subheader("🗺️ Location lookup")
+    st.write("")
+    location_card = st.container(border=True)
+    with location_card:
+        st.subheader("🗺️ Location lookup")
 
-    with st.spinner("Trying to pin the exact location (checking multiple landmarks)..."):
-        match = geocode_best_match(landmark_candidates, area, city, state, pincode, city_hint)
+        with st.spinner("Trying to pin the exact location (checking multiple landmarks)..."):
+            match = geocode_best_match(landmark_candidates, area, city, state, pincode, city_hint)
 
-    confidence_labels = {
-        "landmark": "🟢 High confidence — matched a specific landmark",
-        "area": "🟠 Medium confidence — matched the general area, not a specific landmark",
-        "city": "🔴 Low confidence — only matched the town/city centre",
-    }
+        confidence_labels = {
+            "landmark": "🟢 High confidence — matched a specific landmark",
+            "area": "🟠 Medium confidence — matched the general area, not a specific landmark",
+            "city": "🔴 Low confidence — only matched the town/city centre",
+        }
 
-    if match:
-        st.success(confidence_labels.get(match["confidence"], ""))
-        st.caption(f"Matched on: *{match['matched_query']}*")
+        if match:
+            st.success(confidence_labels.get(match["confidence"], ""))
+            st.caption(f"Matched on: *{match['matched_query']}*")
 
-        zoom_level = 16 if match["confidence"] == "landmark" else 13
-        render_google_map(google_maps_embed_by_coords(match["lat"], match["lon"], zoom=zoom_level))
+            zoom_level = 16 if match["confidence"] == "landmark" else 13
+            render_google_map(google_maps_embed_by_coords(match["lat"], match["lon"], zoom=zoom_level))
 
-        with st.spinner("Double-checking what's actually at this pin..."):
-            nearby = nominatim_reverse(match["lat"], match["lon"])
-        if nearby:
-            st.caption(f"📍 OpenStreetMap's nearest known address for this pin: {nearby}")
-            st.caption("Compare this against the description above — if it doesn't line up, trust the map less and verify with the customer.")
-    else:
-        st.warning(
-            "Could not find any confident pin on OpenStreetMap for this address. "
-            "Small/unnamed landmarks in tier 2/3/4 areas often aren't mapped — "
-            "here's a Google Maps search on the best-guess description instead."
+            with st.spinner("Double-checking what's actually at this pin..."):
+                nearby = nominatim_reverse(match["lat"], match["lon"])
+            if nearby:
+                st.caption(f"📍 OpenStreetMap's nearest known address for this pin: {nearby}")
+                st.caption("Compare this against the description above — if it doesn't line up, trust the map less and verify with the customer.")
+        else:
+            st.warning(
+                "Could not find any confident pin on OpenStreetMap for this address. "
+                "Small/unnamed landmarks in tier 2/3/4 areas often aren't mapped — "
+                "here's a Google Maps search on the best-guess description instead."
+            )
+            fallback_query = build_location_string(
+                [landmark_candidates[0] if landmark_candidates else "", area, city, state, pincode]
+            ) or city_hint
+            if fallback_query:
+                render_google_map(google_maps_embed_by_query(fallback_query))
+
+        maps_url = google_maps_search_url(landmark_candidates, area, city, state, pincode, city_hint)
+        st.link_button("🛵 Open in Google Maps for final check", maps_url, use_container_width=True)
+        st.caption(
+            "Google's map coverage of small-town India is usually more complete than OpenStreetMap's — "
+            "use this link to visually confirm the location before dispatch, especially for medium/low confidence matches."
         )
-        fallback_query = build_location_string(
-            [landmark_candidates[0] if landmark_candidates else "", area, city, state, pincode]
-        ) or city_hint
-        if fallback_query:
-            render_google_map(google_maps_embed_by_query(fallback_query))
-
-    maps_url = google_maps_search_url(landmark_candidates, area, city, state, pincode, city_hint)
-    st.link_button("🛵 Open in Google Maps for final check", maps_url, use_container_width=True)
-    st.caption(
-        "Google's map coverage of small-town India is usually more complete than OpenStreetMap's — "
-        "use this link to visually confirm the location before dispatch, especially for medium/low confidence matches."
-    )
 
     with st.expander("Raw JSON (for debugging / integration)"):
         st.json(result)
