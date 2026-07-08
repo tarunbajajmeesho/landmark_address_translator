@@ -12,6 +12,7 @@ Built for the Meesho Buildathon.
 
 import json
 import time
+import urllib.parse
 
 import requests
 import streamlit as st
@@ -28,12 +29,18 @@ st.set_page_config(
 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
+NOMINATIM_REVERSE_URL = "https://nominatim.openstreetmap.org/reverse"
 
 # Models on OpenRouter that are cheap/fast and good enough for this task.
+# NOTE: Claude 3.5 Haiku and GPT-4o mini are PAID models — they will return
+# a 404 "No endpoints found" error if your OpenRouter account has $0 balance.
+# The Llama option below uses the ":free" suffix, which is required to hit
+# OpenRouter's free tier — without it, OpenRouter silently routes to the
+# paid endpoint for the same model and you'll hit the same 404.
 MODEL_OPTIONS = {
-    "Claude 3.5 Haiku (fast, cheap, recommended)": "anthropic/claude-3.5-haiku",
-    "GPT-4o mini (fast, cheap)": "openai/gpt-4o-mini",
-    "Llama 3.1 8B (free-tier friendly)": "meta-llama/llama-3.1-8b-instruct",
+    "Llama 3.3 70B (free, recommended to start)": "meta-llama/llama-3.3-70b-instruct:free",
+    "Claude 3.5 Haiku (paid — needs OpenRouter credits)": "anthropic/claude-3.5-haiku",
+    "GPT-4o mini (paid — needs OpenRouter credits)": "openai/gpt-4o-mini",
 }
 
 LANGUAGES = [
@@ -63,10 +70,16 @@ text) with this exact structure:
   "formatted_address": "A clean, structured version of the address a delivery \
 agent could read at a glance: house/shop identifier (if any), landmark chain \
 ordered from most well-known to most specific, area, city, pincode if given.",
-  "primary_landmark": "The single most well-known/searchable landmark \
-mentioned (e.g. a temple, school, water tank, bus stand, petrol pump). This \
-should be something that could plausibly be searched on a map. If none is \
-clearly identifiable, return an empty string.",
+  "landmark_candidates": ["A ranked list of 1-4 short, map-searchable phrases, \
+MOST well-known/findable first — e.g. a named temple, school, bus stand, \
+petrol pump, or market. Each entry should be something you could plausibly \
+type into a map search on its own. If genuinely nothing landmark-like is \
+mentioned, return an empty list."],
+  "area": "The neighbourhood/locality/village name if mentioned, else empty string.",
+  "city": "The city/town/village name — use the provided city hint if given, \
+otherwise infer from the text if clearly stated, else empty string.",
+  "state": "Indian state if it can be inferred from the city hint or text, else empty string.",
+  "pincode": "6-digit PIN code if mentioned or given in the city hint, else empty string.",
   "directions_summary": "A short 1-2 sentence plain-language direction \
 summary a delivery agent could follow, e.g. 'From the bus stand, go towards \
 the school, the house is the second lane on the left, blue gate.'",
@@ -87,6 +100,9 @@ Rules:
 informal landmark addresses without a clear direction or distance should \
 score below 60.
 - Keep formatted_address delivery-agent-friendly, not overly formal.
+- landmark_candidates should be ordered from most generically findable (a \
+famous/large landmark) to most specific (a small shop or personal name) — \
+the app will try to geocode them in this order.
 - Do not invent details that were not given or reasonably implied.
 - Output must be valid JSON and nothing else.
 """
@@ -96,10 +112,23 @@ score below 60.
 # --------------------------------------------------------------------------
 
 
+def get_secret_api_key() -> str:
+    """Safely fetch the OpenRouter API key from Streamlit secrets, if present.
+
+    Never raises — if no secrets.toml / Cloud secrets are configured at all,
+    st.secrets access can raise, so we swallow that and just return "".
+    """
+    try:
+        return st.secrets.get("OPENROUTER_API_KEY", "")
+    except Exception:
+        return ""
+
+
 def get_api_key() -> str:
     """Fetch the OpenRouter API key from Streamlit secrets or session state."""
-    if "OPENROUTER_API_KEY" in st.secrets:
-        return st.secrets["OPENROUTER_API_KEY"]
+    secret_key = get_secret_api_key()
+    if secret_key:
+        return secret_key
     return st.session_state.get("manual_api_key", "")
 
 
@@ -142,28 +171,102 @@ def call_openrouter(raw_address: str, city_hint: str, model: str, api_key: str) 
     return json.loads(text)
 
 
-def geocode_landmark(landmark: str, city_hint: str):
-    """Best-effort geocode of the primary landmark via OpenStreetMap Nominatim."""
-    if not landmark:
-        return None
-
-    query = landmark
-    if city_hint.strip():
-        query += f", {city_hint}"
-    query += ", India"
-
+def nominatim_search(query: str):
+    """Single Nominatim forward-geocode call. Returns (lat, lon, display_name) or None."""
     headers = {"User-Agent": "landmark-address-translator-hackathon-app"}
-    params = {"q": query, "format": "json", "limit": 1}
-
+    params = {"q": query, "format": "json", "limit": 1, "countrycodes": "in"}
     try:
         resp = requests.get(NOMINATIM_URL, headers=headers, params=params, timeout=15)
         resp.raise_for_status()
         results = resp.json()
         if results:
-            return float(results[0]["lat"]), float(results[0]["lon"])
+            r = results[0]
+            return float(r["lat"]), float(r["lon"]), r.get("display_name", "")
     except Exception:
         return None
     return None
+
+
+def nominatim_reverse(lat: float, lon: float):
+    """Reverse-geocode a coordinate to see what OSM actually knows is there —
+    a sanity check against the landmark match, since a 'hit' can sometimes be
+    a loose/wrong match."""
+    headers = {"User-Agent": "landmark-address-translator-hackathon-app"}
+    params = {"lat": lat, "lon": lon, "format": "json"}
+    try:
+        resp = requests.get(NOMINATIM_REVERSE_URL, headers=headers, params=params, timeout=15)
+        resp.raise_for_status()
+        data = resp.json()
+        return data.get("display_name", "")
+    except Exception:
+        return ""
+
+
+def build_location_string(parts: list) -> str:
+    """Join non-empty location parts into a single query string."""
+    return ", ".join(p.strip() for p in parts if p and p.strip())
+
+
+def geocode_best_match(landmark_candidates: list, area: str, city: str, state: str, pincode: str, city_hint: str):
+    """Try to find the most accurate pin by attempting several queries, most
+    specific/landmark-based first, falling back to just the area/city/pincode.
+
+    Returns a dict: {lat, lon, matched_query, display_name, confidence} or None.
+    confidence is 'landmark' (matched a specific named place), 'area' (only
+    matched the general locality), or 'city' (only matched the town/city
+    centre — least precise).
+    """
+    location_tail = build_location_string([area, city, state, pincode]) or city_hint
+
+    attempts = []
+
+    # 1) Each landmark candidate + full location context (most accurate if it hits)
+    for lm in landmark_candidates:
+        if lm and lm.strip():
+            attempts.append((build_location_string([lm, location_tail, "India"]), "landmark"))
+
+    # 2) Landmark candidates alone + just city (looser, in case area name confuses OSM)
+    for lm in landmark_candidates:
+        if lm and lm.strip():
+            attempts.append((build_location_string([lm, city or city_hint, "India"]), "landmark"))
+
+    # 3) Area + city + state + pincode (no landmark — general locality pin)
+    if area:
+        attempts.append((build_location_string([area, city, state, pincode, "India"]), "area"))
+
+    # 4) City/town + pincode only (least precise — just gets you to the right town)
+    if city or pincode or city_hint:
+        attempts.append((build_location_string([city, pincode, city_hint, "India"]), "city"))
+
+    seen = set()
+    for query, confidence in attempts:
+        if not query or query in seen:
+            continue
+        seen.add(query)
+        result = nominatim_search(query)
+        # Be polite to Nominatim's free usage policy (max ~1 request/sec).
+        time.sleep(1)
+        if result:
+            lat, lon, display_name = result
+            return {
+                "lat": lat,
+                "lon": lon,
+                "matched_query": query,
+                "display_name": display_name,
+                "confidence": confidence,
+            }
+    return None
+
+
+def google_maps_search_url(landmark_candidates: list, area: str, city: str, state: str, pincode: str, city_hint: str) -> str:
+    """Build a no-API-key Google Maps search link using the best available
+    text description. Google's coverage of small Indian landmarks is often
+    much better than OpenStreetMap's, so this is offered as the primary
+    'go verify this yourself' action regardless of whether OSM found a pin."""
+    best_landmark = landmark_candidates[0] if landmark_candidates else ""
+    location_tail = build_location_string([area, city, state, pincode]) or city_hint
+    query = build_location_string([best_landmark, location_tail, "India"])
+    return "https://www.google.com/maps/search/?api=1&query=" + urllib.parse.quote(query)
 
 
 def risk_badge(risk_level: str) -> str:
@@ -178,7 +281,7 @@ def risk_badge(risk_level: str) -> str:
 with st.sidebar:
     st.header("⚙️ Settings")
 
-    has_secret_key = "OPENROUTER_API_KEY" in st.secrets
+    has_secret_key = bool(get_secret_api_key())
     if has_secret_key:
         st.success("API key loaded from app secrets.")
     else:
@@ -274,7 +377,22 @@ if submit:
         try:
             result = call_openrouter(prompt_address, city_hint, selected_model, api_key)
         except requests.exceptions.HTTPError as e:
-            st.error(f"OpenRouter API error: {e}")
+            status = e.response.status_code if e.response is not None else None
+            if status == 404:
+                st.error(
+                    "OpenRouter couldn't find an available endpoint for this model "
+                    "(404). This almost always means either: (1) your OpenRouter "
+                    "account has $0 balance and you picked a paid model — switch to "
+                    "the free Llama 3.3 70B option in the sidebar, or add credits at "
+                    "openrouter.ai/settings/credits, or (2) the model slug is stale — "
+                    "check openrouter.ai/models for the current one."
+                )
+            elif status == 401:
+                st.error("OpenRouter rejected the API key (401) — double-check it's correct and active.")
+            elif status == 402:
+                st.error("OpenRouter says payment is required (402) — add credits at openrouter.ai/settings/credits.")
+            else:
+                st.error(f"OpenRouter API error: {e}")
             st.stop()
         except (KeyError, json.JSONDecodeError):
             st.error(
@@ -315,19 +433,46 @@ if submit:
         for q in questions:
             st.write(f"- {q}")
 
-    landmark = result.get("primary_landmark", "")
-    if landmark:
-        with st.spinner("Looking up landmark on the map..."):
-            coords = geocode_landmark(landmark, city_hint)
-        if coords:
-            st.subheader("🗺️ Approximate location")
-            st.caption(f"Best-effort pin for landmark: **{landmark}**. Always verify before dispatch.")
-            st.map({"lat": [coords[0]], "lon": [coords[1]]}, zoom=14)
-        else:
-            st.caption(
-                f"Primary landmark identified as **{landmark}**, but it could not be "
-                "found on the map automatically — verify manually."
-            )
+    landmark_candidates = result.get("landmark_candidates", [])
+    area = result.get("area", "")
+    city = result.get("city", "")
+    state = result.get("state", "")
+    pincode = result.get("pincode", "")
+
+    st.subheader("🗺️ Location lookup")
+
+    with st.spinner("Trying to pin the exact location (checking multiple landmarks)..."):
+        match = geocode_best_match(landmark_candidates, area, city, state, pincode, city_hint)
+
+    confidence_labels = {
+        "landmark": "🟢 High confidence — matched a specific landmark",
+        "area": "🟠 Medium confidence — matched the general area, not a specific landmark",
+        "city": "🔴 Low confidence — only matched the town/city centre",
+    }
+
+    if match:
+        st.success(confidence_labels.get(match["confidence"], ""))
+        st.caption(f"Matched on: *{match['matched_query']}*")
+        st.map({"lat": [match["lat"]], "lon": [match["lon"]]}, zoom=15 if match["confidence"] == "landmark" else 12)
+
+        with st.spinner("Double-checking what's actually at this pin..."):
+            nearby = nominatim_reverse(match["lat"], match["lon"])
+        if nearby:
+            st.caption(f"📍 OpenStreetMap's nearest known address for this pin: {nearby}")
+            st.caption("Compare this against the description above — if it doesn't line up, trust the map less and verify with the customer.")
+    else:
+        st.warning(
+            "Could not find any confident pin on OpenStreetMap for this address. "
+            "Small/unnamed landmarks in tier 2/3/4 areas often aren't mapped — "
+            "use the Google Maps link below to search manually, or verify by phone."
+        )
+
+    maps_url = google_maps_search_url(landmark_candidates, area, city, state, pincode, city_hint)
+    st.link_button("🔎 Open best-guess search in Google Maps", maps_url, use_container_width=True)
+    st.caption(
+        "Google's map coverage of small-town India is usually more complete than OpenStreetMap's — "
+        "use this link to visually confirm the location before dispatch, especially for medium/low confidence matches."
+    )
 
     with st.expander("Raw JSON (for debugging / integration)"):
         st.json(result)
