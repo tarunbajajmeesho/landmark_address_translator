@@ -26,7 +26,7 @@ st.set_page_config(
     layout="centered",
 )
 
-OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+OPENROUTER_URL = st.secrets["OPENROUTER_API_KEY"]
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
 
 # Models on OpenRouter that are cheap/fast and good enough for this task.
